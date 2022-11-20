@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from fastai.layers import LinBnDrop, TimeDistributed
-from poolers import  MeanPooling, MaxPooling
+from .poolers import  MeanPooling, MaxPooling
 
 
 class MeanMaxHead(nn.Module):

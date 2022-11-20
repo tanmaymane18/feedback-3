@@ -1,7 +1,10 @@
-from poolers import *
+import torch
+import torch.nn as nn
 from fastai.layers import TimeDistributed, LinBnDrop, Swish, Mish
 from transformers import AutoConfig, AutoModel
 from transformers.modeling_outputs import SequenceClassifierOutput
+
+from .poolers import MeanPooling, MaxPooling, ClsPooler
 
 class FeedbackModel(nn.Module):
     def __init__(self):
@@ -46,6 +49,7 @@ class FeedbackHead(nn.Module):
     def forward(self, x):
         x = x.squeeze(1)
         x = self.layers(x)
+        return x
         return SequenceClassifierOutput(logits=x)
 
 class ModelBuilder:
