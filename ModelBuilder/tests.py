@@ -1,7 +1,12 @@
 import unittest
+from functools import partial
 from poolers import MeanPooling, MaxPooling, ClsPooler
+from model_builder import ModelBuilder
 import transformers
 from transformers import AutoTokenizer, AutoModel, AutoConfig
+import warnings
+
+warnings.filterwarnings("ignore")
 
 model_name = "microsoft/deberta-v3-base"
 max_len = 1429
@@ -55,6 +60,53 @@ class TestPoolers(unittest.TestCase):
         cls_output = self.cls_pooler(self.embeddings)
         output_shape = cls_output.detach().numpy().shape
         self.assertEqual(output_shape, (self.bs, self.hidden_dim))
+
+
+class TestModelBuilder(unittest.TestCase):
+    def setUp(self):
+
+        base_tok = AutoTokenizer.from_pretrained(model_name)
+
+        self.toks = base_tok([
+            "This is dummy text 1 ", 
+            "This is dummy text 2"
+            ], return_tensors="pt",
+               max_length=max_len,
+               padding=True)
+        self.bs = 2
+        self.poolers = [
+            partial(ClsPooler, hidden_size=hidden_size, 
+                        last_n_cls=4, drop_p=0),
+            MeanPooling,
+            MaxPooling
+        ]
+
+        embedding_size = hidden_size*len(self.poolers)
+        
+        self.num_labels = 6
+        self.model_name = model_name
+
+        self.dims = [
+                embedding_size, 
+                embedding_size//2, 
+                embedding_size//4, 
+                self.num_labels
+            ]
+        self.ps = [0.1, 0.2, 0.3, 0.4]
+    
+    def test_model_builer(self):
+        builder = ModelBuilder(model_name=self.model_name, 
+                                dims=self.dims, 
+                                ps=self.ps, 
+                                poolers=self.poolers, 
+                                num_labels=self.num_labels, 
+                                hidden_dropout_prob=0)
+        model = builder.get_model()
+        del self.toks["token_type_ids"]
+        output = model(**self.toks)
+        # print(output.logits)
+        self.assertEqual(output.logits.logits.shape, 
+                        (self.bs, self.num_labels))
 
 if __name__ == "__main__":
     unittest.main()

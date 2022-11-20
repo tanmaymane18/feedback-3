@@ -40,7 +40,7 @@ class ClsPooler(nn.Module):
         self.last_n_cls = last_n_cls
         self.cls_pool_fc = nn.Linear(hidden_size*last_n_cls, hidden_size, bias=False)
     
-    def forward(self, embeddings):
+    def forward(self, embeddings, attention_mask=None):
         hidden_states = embeddings.hidden_states
         last_n_concat= torch.concat([
             hidden_states[-i][:,0,:] for i in range(1, self.last_n_cls+1)
