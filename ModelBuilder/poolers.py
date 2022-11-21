@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from fastai.layers import TimeDistributed
 
 
 class MeanPooling(nn.Module):
@@ -47,6 +48,27 @@ class ClsPooler(nn.Module):
         ], -1)
         last_n_concat = self.cls_pool_fc(last_n_concat)
         return last_n_concat
+
+class MeanMaxPooler(nn.Module):
+    def __init__(self, hidden_size=768):
+        super(MeanMaxPooler, self).__init__()
+        self.mean_pooler = MeanPooling(head=True)
+        self.max_pooler = MaxPooling(head=True)
+        self.tdl = TimeDistributed(module=nn.Linear(hidden_size, hidden_size, bias=False), low_mem=True, tdim=1)
+        self.cls_fc = nn.Linear(hidden_size, hidden_size, bias=False)
+    
+    def forward(self, embeddings, attention_mask):
+        last_hidden_state = embeddings.last_hidden_state
+        tdl_output = self.tdl(last_hidden_state[:, 1:, :])
+        mean_pooled = self.mean_pooler(tdl_output, attention_mask[:, 1:])
+        max_pooled = self.max_pooler(tdl_output, attention_mask[:, 1:])
+        cls_token = self.cls_fc(last_hidden_state[:, 0, :])
+
+        pooled_embeds = torch.concat([
+            cls_token, mean_pooled, max_pooled
+        ], dim = -1)
+
+        return pooled_embeds
 
 
 if __name__ == "__main__":

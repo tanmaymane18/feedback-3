@@ -50,7 +50,6 @@ class FeedbackHead(nn.Module):
         x = x.squeeze(1)
         x = self.layers(x)
         return x
-        return SequenceClassifierOutput(logits=x)
 
 class ModelBuilder:
     def __init__(self, model_name, dims, ps, poolers=None, num_labels=6, hidden_dropout_prob=0):

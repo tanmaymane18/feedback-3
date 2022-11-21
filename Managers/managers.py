@@ -1,3 +1,4 @@
+import gc
 from copy import deepcopy
 from fastai.text.all import *
 from fasthugs.data import TransformersTextBlock
@@ -27,6 +28,10 @@ class ExpManager:
 
     def fold_trainings(self):
         for fold in range(self.num_folds):
+            
+            torch.cuda.empty_cache()
+            gc.collect()
+
             print("\n\n")
             print("#"*30)
             print("#")
@@ -66,7 +71,7 @@ class ExpManager:
                 opt_func=self.kwargs["opt_func"], 
                 loss_func=self.kwargs["loss_func"]()
             )
-            # learn = learn.to_fp16()
+            learn = learn.to_fp16()
 
             if self.kwargs["fine_tune"]:
                 learn.freeze_to(self.kwargs["freeze_to"])

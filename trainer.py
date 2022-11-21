@@ -11,7 +11,7 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
-os.environ["TOKENIZERS_PARALLELISM"] = "false"
+# os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 def params(m):
     return [p for p in m.parameters()]
@@ -44,6 +44,13 @@ class RMSE:
 
 MCRMSE = AccumMetric(MCRMSE_metric)
 
+def set_seed(x=42):
+    random.seed(x)
+    np.random.seed(x)
+    torch.manual_seed(x)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    if torch.cuda.is_available(): torch.cuda.manual_seed_all(x)
 
 hidden_size = 768
 
@@ -58,11 +65,11 @@ config = dict(
     val_bs=16,
     model_splitter=transSplitter,
     metric=MCRMSE,
-    opt_func=ranger,
+    opt_func=Adam,
     loss_func=RMSE,
     fine_tune=True,
     n_epochs=2,
-    lr=3e-3,
+    lr=3e-2,
     pct_start=0.25,
     wd=0.01,
     model_dir="test_run_models",
@@ -89,6 +96,8 @@ config = dict(
 )
 
 if __name__ == "__main__":
+
+    set_seed()
 
     df = pd.read_csv("data\\train_folds.csv")
 
