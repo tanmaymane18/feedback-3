@@ -28,7 +28,8 @@ class FeedbackPooler(nn.Module):
         ])
     
     def forward(self, embeddings, attention_mask):
-        combine_feature = None
+        combine_feature = embeddings.last_hidden_state[:, 0, :]
+        combine_feature = combine_feature.unsqueeze(1)
         for layer in self.poolers:
             layer_output = layer(embeddings, attention_mask)
             layer_output = layer_output.unsqueeze(1)
@@ -42,8 +43,8 @@ class FeedbackPooler(nn.Module):
 class FeedbackHead(nn.Module):
     def __init__(self, dims, ps):
         super(FeedbackHead, self).__init__()
-        acts = [nn.ReLU(inplace=True)] * (len(dims) - 2) + [None]
-        layers = [LinBnDrop(i, o, p=p, act=a) for i,o,p,a in zip(dims[:-1], dims[1:], ps, acts)]
+        acts = [Swish()] * (len(dims) - 2) + [None]
+        layers = [LinBnDrop(i, o, p=p, act=a) for i,o,p,a in zip(dims[:-1], dims[1:], ps, acts)] + [LinBnDrop(dims[-1], 6, bn=False)]
         self.layers = nn.Sequential(*layers)
     
     def forward(self, x):

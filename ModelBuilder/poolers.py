@@ -9,10 +9,12 @@ class MeanPooling(nn.Module):
         self.head = head
         
     def forward(self, embeddings, attention_mask):
-        last_hidden_state = embeddings.last_hidden_state
         if self.head:
-            last_hidden_state = embeddings.last_hidden_state[:, 1:, :]
-            attention_mask = attention_mask[:, 1:, :]
+            last_hidden_state = embeddings
+            attention_mask = attention_mask
+        else:
+            last_hidden_state = embeddings.last_hidden_state
+        
         input_mask_expanded = attention_mask.unsqueeze(-1).expand(last_hidden_state.size()).float()
         sum_embeddings = torch.sum(last_hidden_state * input_mask_expanded, 1)
         sum_mask = input_mask_expanded.sum(1)
@@ -26,12 +28,14 @@ class MaxPooling(nn.Module):
         self.head = head
         
     def forward(self, embeddings, attention_mask):
-        last_hidden_state = embeddings.last_hidden_state
         if self.head:
-            last_hidden_state = embeddings.last_hidden_state[:, 1:, :]
-            attention_mask = attention_mask[:, 1:, :]
+            last_hidden_state = embeddings
+            attention_mask = attention_mask
+        else:
+            last_hidden_state = embeddings.last_hidden_state
+        
         input_mask_expanded = attention_mask.unsqueeze(-1).expand(last_hidden_state.size()).float()
-        last_hidden_state[input_mask_expanded == 0] = -1e9
+        last_hidden_state[input_mask_expanded == 0] = -1e4
         max_embeddings = torch.max(last_hidden_state, 1)[0]
         return max_embeddings
 
