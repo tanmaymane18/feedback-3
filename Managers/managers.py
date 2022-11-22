@@ -27,11 +27,9 @@ class ExpManager:
         )
 
     def fold_trainings(self):
+        torch.cuda.empty_cache()
+        gc.collect()
         for fold in range(self.num_folds):
-            
-            torch.cuda.empty_cache()
-            gc.collect()
-
             print("\n\n")
             print("#"*30)
             print("#")
@@ -71,7 +69,7 @@ class ExpManager:
                 opt_func=self.kwargs["opt_func"], 
                 loss_func=self.kwargs["loss_func"]()
             )
-            learn = learn.to_fp16()
+            # learn = learn.to_fp16()
 
             if self.kwargs["fine_tune"]:
                 learn.freeze_to(self.kwargs["freeze_to"])
@@ -87,7 +85,8 @@ class ExpManager:
                         self.kwargs["n_epochs"],
                         lr_max=self.kwargs["lr"],
                         pct_start=self.kwargs["pct_start"],
-                        wd=self.kwargs["wd"]
+                        wd=self.kwargs["wd"],
+                        cbs=[GradientClip]
                     )
             
             if "full_training" in self.kwargs:
@@ -112,9 +111,13 @@ class ExpManager:
             learn.model_dir = self.kwargs["model_dir"]
             learn.save(f"fb3_fold_{fold+1}", with_opt=False)
 
+            del learn, dls, dblock, model
+            torch.cuda.empty_cache()
+            gc.collect()
+
     def oof_pred_eval(self):
-        oof_preds = torch.stack(self.val_preds)
-        oof_targs = torch.stack(self.val_targs)
+        oof_preds = torch.concat(self.oof_preds)
+        oof_targs = torch.concat(self.oof_targs)
 
         oof_metric = self.kwargs["metric"](oof_preds, oof_targs)
 

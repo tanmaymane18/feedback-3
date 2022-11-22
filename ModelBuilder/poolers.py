@@ -35,7 +35,7 @@ class MaxPooling(nn.Module):
             last_hidden_state = embeddings.last_hidden_state
         
         input_mask_expanded = attention_mask.unsqueeze(-1).expand(last_hidden_state.size()).float()
-        last_hidden_state[input_mask_expanded == 0] = -1e4
+        last_hidden_state[input_mask_expanded == 0] = -1e9
         max_embeddings = torch.max(last_hidden_state, 1)[0]
         return max_embeddings
 
@@ -44,6 +44,7 @@ class ClsPooler(nn.Module):
         super(ClsPooler, self).__init__()
         self.last_n_cls = last_n_cls
         self.cls_pool_fc = nn.Linear(hidden_size*last_n_cls, hidden_size, bias=False)
+        nn.init.kaiming_normal(self.cls_pool_fc.weight)
     
     def forward(self, embeddings, attention_mask=None):
         hidden_states = embeddings.hidden_states
@@ -60,7 +61,9 @@ class MeanMaxPooler(nn.Module):
         self.max_pooler = MaxPooling(head=True)
         self.tdl = TimeDistributed(module=nn.Linear(hidden_size, hidden_size, bias=False), low_mem=True, tdim=1)
         self.cls_fc = nn.Linear(hidden_size, hidden_size, bias=False)
-    
+
+        nn.init.kaiming_normal(self.cls_fc.weight)
+
     def forward(self, embeddings, attention_mask):
         last_hidden_state = embeddings.last_hidden_state
         tdl_output = self.tdl(last_hidden_state[:, 1:, :])
@@ -73,7 +76,29 @@ class MeanMaxPooler(nn.Module):
         ], dim = -1)
 
         return pooled_embeds
+class Conv1DLayer(nn.Sequential):
+    def __init__(self, in_chn, out_chn, kernel_size=1, stride=2, bn=True, p=0):
+        layers = []
 
+        if bn:
+            b_norm = nn.BatchNorm1d(in_chn)
+            layers.append(b_norm)
+        
+        if p>0:
+            drop_layer = nn.Dropout(p=p)
+            layers.append(drop_layer)
+
+        conv_1d = nn.Conv1d(
+            in_channels=in_chn, 
+            out_channels=out_chn,
+            kernel_size=kernel_size,
+            stride=stride
+        )
+
+        layers.append(conv_1d)
+        
+        super(Conv1DLayer, self).__init__(*layers)
+        
 
 if __name__ == "__main__":
     print("poolers")

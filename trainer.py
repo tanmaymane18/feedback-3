@@ -4,7 +4,7 @@ import pandas as pd
 from functools import partial
 from fastai.text.all import *
 from Managers.managers import ExpManager
-from ModelBuilder.poolers import ClsPooler, MeanPooling, MaxPooling
+from ModelBuilder.poolers import ClsPooler, MeanPooling, MaxPooling, MeanMaxPooler
 from transformers import logging
 logging.set_verbosity_error()
 import warnings
@@ -68,31 +68,26 @@ config = dict(
     opt_func=Adam,
     loss_func=RMSE,
     fine_tune=True,
-    n_epochs=2,
-    lr=3e-2,
+    n_epochs=1,
+    lr=3e-4,
     pct_start=0.25,
-    wd=0.01,
+    wd=0.0,
     model_dir="test_run_models",
     poolers=[
-        partial(ClsPooler, hidden_size=hidden_size, 
-                        last_n_cls=4, drop_p=0),
-        MeanPooling,
-        MaxPooling
+        # partial(ClsPooler, hidden_size=hidden_size, 
+        #                 last_n_cls=4, drop_p=0),
+        # MeanPooling,
+        # MaxPooling,
+        # MeanMaxPooler
     ],
     dims=[
-        (hidden_size*3),
-        (hidden_size*3)//2,
-        (hidden_size*3)//4,
-        6
+        hidden_size
     ],
     ps = [
-        0.2,
-        0.3,
-        0.4,
-        0
+        0.4
     ],
     freeze_to=15,
-    fit_type="flat_cos"
+    fit_type="one_cycle"
 )
 
 if __name__ == "__main__":

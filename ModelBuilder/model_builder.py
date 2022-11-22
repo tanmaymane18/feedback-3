@@ -21,22 +21,26 @@ class FeedbackModel(nn.Module):
         return SequenceClassifierOutput(logits=output)
 
 class FeedbackPooler(nn.Module):
-    def __init__(self, poolers):
+    def __init__(self, poolers=[]):
         super(FeedbackPooler, self).__init__()
-        self.poolers = nn.ModuleList([
-            pooler() for pooler in poolers
-        ])
+        self.is_poolers = False
+        if len(poolers):
+            self.is_poolers = True
+            self.poolers = nn.ModuleList([
+                pooler() for pooler in poolers
+            ])
     
     def forward(self, embeddings, attention_mask):
         combine_feature = embeddings.last_hidden_state[:, 0, :]
         combine_feature = combine_feature.unsqueeze(1)
-        for layer in self.poolers:
-            layer_output = layer(embeddings, attention_mask)
-            layer_output = layer_output.unsqueeze(1)
-            if combine_feature != None:
-                combine_feature = torch.concat([combine_feature, layer_output], dim=-1)
-            else:
-                combine_feature = layer_output
+        if self.is_poolers:
+            for layer in self.poolers:
+                layer_output = layer(embeddings, attention_mask)
+                layer_output = layer_output.unsqueeze(1)
+                if combine_feature != None:
+                    combine_feature = torch.concat([combine_feature, layer_output], dim=-1)
+                else:
+                    combine_feature = layer_output
         
         return combine_feature
 
