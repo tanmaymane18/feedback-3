@@ -81,13 +81,16 @@ class ExpManager:
                         wd=self.kwargs["wd"]
                     )
                 elif self.kwargs["fit_type"] == "one_cycle":
-                    learn.fit_one_cycle(
-                        self.kwargs["n_epochs"],
-                        lr_max=self.kwargs["lr"],
-                        pct_start=self.kwargs["pct_start"],
-                        wd=self.kwargs["wd"],
-                        cbs=[GradientClip]
-                    )
+                    lr_factor = 1
+                    for _ in range(self.kwargs["num_fits"]):
+                        learn.fit_one_cycle(
+                            self.kwargs["n_epochs"],
+                            lr_max=self.kwargs["lr"]*lr_factor,
+                            pct_start=self.kwargs["pct_start"],
+                            wd=self.kwargs["wd"],
+                            cbs=[GradientClip]
+                        )
+                        lr_factor = lr_factor*0.9
             
             if "full_training" in self.kwargs:
                 if self.kwargs["full_training"]:

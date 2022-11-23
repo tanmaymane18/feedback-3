@@ -31,8 +31,9 @@ class FeedbackPooler(nn.Module):
             ])
     
     def forward(self, embeddings, attention_mask):
-        combine_feature = embeddings.last_hidden_state[:, 0, :]
-        combine_feature = combine_feature.unsqueeze(1)
+        # combine_feature = embeddings.last_hidden_state[:, 0, :]
+        # combine_feature = combine_feature.unsqueeze(1)
+        combine_feature = None
         if self.is_poolers:
             for layer in self.poolers:
                 layer_output = layer(embeddings, attention_mask)

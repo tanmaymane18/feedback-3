@@ -72,10 +72,10 @@ config = dict(
     lr=3e-4,
     pct_start=0.25,
     wd=0.0,
-    model_dir="test_run_models",
+    model_dir="last_4_cls_tokens_one_cycle_4_fits",
     poolers=[
-        # partial(ClsPooler, hidden_size=hidden_size, 
-        #                 last_n_cls=4, drop_p=0),
+        partial(ClsPooler, hidden_size=hidden_size, 
+                        last_n_cls=4, drop_p=0)
         # MeanPooling,
         # MaxPooling,
         # MeanMaxPooler
@@ -87,7 +87,8 @@ config = dict(
         0.4
     ],
     freeze_to=15,
-    fit_type="one_cycle"
+    fit_type="one_cycle",
+    num_fits=4
 )
 
 if __name__ == "__main__":
