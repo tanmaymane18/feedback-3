@@ -78,7 +78,8 @@ class ExpManager:
                         self.kwargs["n_epochs"],
                         lr=self.kwargs["lr"],
                         pct_start=self.kwargs["pct_start"],
-                        wd=self.kwargs["wd"]
+                        wd=self.kwargs["wd"],
+                        cbs=[GradientClip]
                     )
                 elif self.kwargs["fit_type"] == "one_cycle":
                     lr_factor = 1

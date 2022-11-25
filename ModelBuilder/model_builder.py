@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from fastai.layers import TimeDistributed, LinBnDrop, Swish, Mish
+from fastai.layers import TimeDistributed, LinBnDrop, Swish, Mish, sigmoid_range
 from transformers import AutoConfig, AutoModel
 from transformers.modeling_outputs import SequenceClassifierOutput
 
@@ -54,7 +54,7 @@ class FeedbackHead(nn.Module):
     
     def forward(self, x):
         x = x.squeeze(1)
-        x = self.layers(x)
+        x = sigmoid_range(self.layers(x), 1,5.5)
         return x
 
 class ModelBuilder:
