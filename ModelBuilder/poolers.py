@@ -44,12 +44,16 @@ class ClsPooler(nn.Module):
         super(ClsPooler, self).__init__()
         self.last_n_cls = last_n_cls
         self.weighted = weighted
+        self.res_block = nn.Sequential(*[
+            ResNet1DBlock(hidden_size*(last_n_cls-i), hidden_size*(last_n_cls-(i+1)), p=drop_p) 
+            for i in range(last_n_cls) if ((last_n_cls-(i+1)) > 1)
+        ])
         if self.weighted:
             self.weights = torch.ones(self.last_n_cls).unsqueeze(0).T
             self.weights = nn.parameter.Parameter(self.weights)
-        else:
-            self.cls_pool_fc = nn.Linear(hidden_size*last_n_cls, hidden_size, bias=False)
-            nn.init.kaiming_normal(self.cls_pool_fc.weight)
+        # else:
+        #     self.cls_pool_fc = LinLnDrop(hidden_size, hidden_size, bias=False)
+            # nn.init.kaiming_normal(self.cls_pool_fc.weight)
     
     def forward(self, embeddings, attention_mask=None):
         hidden_states = embeddings.hidden_states
@@ -67,8 +71,10 @@ class ClsPooler(nn.Module):
             # last_n_concat = last_n_concat
             cls_pooled = torch.sum(last_n_concat*self.weights, dim=dim)
             return cls_pooled
-
-        last_n_concat = self.cls_pool_fc(last_n_concat)
+        last_n_concat = last_n_concat.permute(0, 2, 1)
+        last_n_concat = self.res_block(last_n_concat)
+        last_n_concat = last_n_concat.permute(0,2,1)
+        # last_n_concat = self.cls_pool_fc(last_n_concat)
         return last_n_concat
 
 class MeanMaxPooler(nn.Module):
@@ -115,6 +121,50 @@ class Conv1DLayer(nn.Sequential):
         layers.append(conv_1d)
         
         super(Conv1DLayer, self).__init__(*layers)
+
+class Conv1DBlock(nn.Sequential):
+    def __init__(self, in_chn, out_chn, p=0):
+        layers = [
+            Conv1DLayer(in_chn=in_chn, out_chn=in_chn, p=p),
+            Conv1DLayer(in_chn=in_chn, out_chn=out_chn, p=p)
+        ]
+    
+        super(Conv1DBlock, self).__init__(*layers)
+
+class ResNet1D(nn.Module):
+    def __init__(self, in_chn, out_chn, p=0):
+        super(ResNet1D, self).__init__()
+        self.conv_1d_block = Conv1DBlock(in_chn=in_chn,
+                                        out_chn=out_chn, p=p)
+    
+    def forward(self, x):
+        conv_x = self.conv_1d_block(x)
+        return conv_x + x
+
+class ResNet1DBlock(nn.Sequential):
+    def __init__(self, in_chn, out_chn, p=0):
+        res_net_1d = ResNet1D(in_chn=in_chn, out_chn=in_chn, p=p)
+        conv_block = Conv1DBlock(in_chn=in_chn, out_chn=out_chn)
+        layers = [res_net_1d, conv_block]
+
+        super(ResNet1DBlock, self).__init__(*layers)
+
+class LinLnDrop(nn.Sequential):
+    def __init__(self,in_dim, out_dim, act=None, norm_first=True, p=0, bias=False):
+        layers = []
+        if p > 0:
+            layers.append(nn.Dropout(p))
+        lin_layer = nn.Linear(in_dim, out_dim, bias=bias)
+        nn.init.kaiming_normal(lin_layer.weight)
+        layers.append(lin_layer)
+        if norm_first:
+            layers.insert(0, nn.LayerNorm(in_dim))
+        else:
+            layers.append(nn.LayerNorm(out_dim))
+        if act != None:
+            layers.append(act)
+        super(LinLnDrop, self).__init__(*layers)
+
         
 
 if __name__ == "__main__":

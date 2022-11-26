@@ -65,30 +65,32 @@ config = dict(
     val_bs=16,
     model_splitter=transSplitter,
     metric=MCRMSE,
-    opt_func=Adam,
+    opt_func=ranger,
     loss_func=RMSE,
     fine_tune=True,
-    n_epochs=1,
-    lr=3e-4,
-    pct_start=0.25,
-    wd=0.0,
-    model_dir="last_4_cls_tokens_one_cycle_4_fits",
+    n_epochs=5,
+    lr=1e-4,
+    pct_start=0.20,
+    wd=0.1,
+    model_dir="last_4_cls_pool_ResNet_one_cycle_1_fits",
     poolers=[
         partial(ClsPooler, hidden_size=hidden_size, 
-                        last_n_cls=4, drop_p=0)
-        # MeanPooling,
+                        last_n_cls=5, weighted=False, drop_p=0.2)
+        # MeanPooling
         # MaxPooling,
         # MeanMaxPooler
     ],
     dims=[
+        hidden_size*2,
         hidden_size
     ],
     ps = [
-        0.4
+        0.2,
+        0
     ],
     freeze_to=15,
     fit_type="one_cycle",
-    num_fits=4
+    num_fits=1
 )
 
 if __name__ == "__main__":

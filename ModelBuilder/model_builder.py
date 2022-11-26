@@ -4,7 +4,7 @@ from fastai.layers import TimeDistributed, LinBnDrop, Swish, Mish, sigmoid_range
 from transformers import AutoConfig, AutoModel
 from transformers.modeling_outputs import SequenceClassifierOutput
 
-from .poolers import MeanPooling, MaxPooling, ClsPooler
+from .poolers import MeanPooling, MaxPooling, ClsPooler, LinLnDrop
 
 class FeedbackModel(nn.Module):
     def __init__(self):
@@ -37,7 +37,8 @@ class FeedbackPooler(nn.Module):
         if self.is_poolers:
             for layer in self.poolers:
                 layer_output = layer(embeddings, attention_mask)
-                layer_output = layer_output.unsqueeze(1)
+                if len(layer_output.shape)<3:
+                    layer_output = layer_output.unsqueeze(1)
                 if combine_feature != None:
                     combine_feature = torch.concat([combine_feature, layer_output], dim=-1)
                 else:
@@ -49,12 +50,12 @@ class FeedbackHead(nn.Module):
     def __init__(self, dims, ps):
         super(FeedbackHead, self).__init__()
         acts = [Swish()] * (len(dims) - 2) + [None]
-        layers = [LinBnDrop(i, o, p=p, act=a) for i,o,p,a in zip(dims[:-1], dims[1:], ps, acts)] + [LinBnDrop(dims[-1], 6, bn=False)]
+        layers = [LinLnDrop(i, o, p=p, act=a) for i,o,p,a in zip(dims[:-1], dims[1:], ps, acts)] + [LinBnDrop(dims[-1], 6, bn=False)]
         self.layers = nn.Sequential(*layers)
     
     def forward(self, x):
         x = x.squeeze(1)
-        x = sigmoid_range(self.layers(x), 1,5.5)
+        x = sigmoid_range(self.layers(x), 0.5,5.5)
         return x
 
 class ModelBuilder:
