@@ -65,28 +65,30 @@ config = dict(
     val_bs=16,
     model_splitter=transSplitter,
     metric=MCRMSE,
-    opt_func=ranger,
+    opt_func=Adam,
     loss_func=RMSE,
-    fine_tune=True,
+    fine_tune=False,
+    full_training=True,
     n_epochs=5,
-    lr=1e-4,
-    pct_start=0.20,
-    wd=0.1,
-    model_dir="last_4_cls_pool_ResNet_one_cycle_1_fits",
+    lr_min=1e-8,
+    lr_max=1e-4,
+    pct_start=0.25,
+    wd=0.0,
+    model_dir="last_4_cls_pool_full_training_one_cycle_1_fits",
     poolers=[
         partial(ClsPooler, hidden_size=hidden_size, 
-                        last_n_cls=5, weighted=False, drop_p=0.2)
+                        last_n_cls=4, weighted=False, drop_p=0.0)
         # MeanPooling
         # MaxPooling,
         # MeanMaxPooler
     ],
     dims=[
-        hidden_size*2,
-        hidden_size
+        hidden_size,
+        hidden_size//3
     ],
     ps = [
-        0.2,
-        0
+        0.4,
+        0.2
     ],
     freeze_to=15,
     fit_type="one_cycle",

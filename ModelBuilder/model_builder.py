@@ -46,7 +46,7 @@ class FeedbackPooler(nn.Module):
         
         return combine_feature
 
-class FeedbackHead(nn.Module):
+class FeedbackHead(nn.Module):  
     def __init__(self, dims, ps):
         super(FeedbackHead, self).__init__()
         acts = [Swish()] * (len(dims) - 2) + [None]

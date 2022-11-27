@@ -44,15 +44,15 @@ class ClsPooler(nn.Module):
         super(ClsPooler, self).__init__()
         self.last_n_cls = last_n_cls
         self.weighted = weighted
-        self.res_block = nn.Sequential(*[
-            ResNet1DBlock(hidden_size*(last_n_cls-i), hidden_size*(last_n_cls-(i+1)), p=drop_p) 
-            for i in range(last_n_cls) if ((last_n_cls-(i+1)) > 1)
-        ])
+        # self.res_block = nn.Sequential(*[
+        #     ResNet1DBlock(hidden_size*(last_n_cls-i), hidden_size*(last_n_cls-(i+1)), p=drop_p) 
+        #     for i in range(last_n_cls) if ((last_n_cls-(i+1)) > 1)
+        # ])
         if self.weighted:
             self.weights = torch.ones(self.last_n_cls).unsqueeze(0).T
             self.weights = nn.parameter.Parameter(self.weights)
-        # else:
-        #     self.cls_pool_fc = LinLnDrop(hidden_size, hidden_size, bias=False)
+        else:
+            self.cls_pool_fc = LinLnDrop(hidden_size*self.last_n_cls, hidden_size, bias=False)
             # nn.init.kaiming_normal(self.cls_pool_fc.weight)
     
     def forward(self, embeddings, attention_mask=None):
@@ -62,7 +62,7 @@ class ClsPooler(nn.Module):
             dim = 1
 
         last_n_concat= torch.concat([
-            hidden_states[-i][:,0,:].unsqueeze(1) for i in range(1, self.last_n_cls+1)
+            hidden_states[-i][:,0,:] for i in range(1, self.last_n_cls+1)
         ], dim=dim)
 
         if self.weighted:
@@ -71,10 +71,10 @@ class ClsPooler(nn.Module):
             # last_n_concat = last_n_concat
             cls_pooled = torch.sum(last_n_concat*self.weights, dim=dim)
             return cls_pooled
-        last_n_concat = last_n_concat.permute(0, 2, 1)
-        last_n_concat = self.res_block(last_n_concat)
-        last_n_concat = last_n_concat.permute(0,2,1)
-        # last_n_concat = self.cls_pool_fc(last_n_concat)
+        # last_n_concat = last_n_concat.permute(0, 2, 1)
+        # last_n_concat = self.res_block(last_n_concat)
+        # last_n_concat = last_n_concat.permute(0,2,1)
+        last_n_concat = self.cls_pool_fc(last_n_concat).unsqueeze(1)
         return last_n_concat
 
 class MeanMaxPooler(nn.Module):
