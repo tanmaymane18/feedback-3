@@ -45,7 +45,7 @@ class ClsPooler(nn.Module):
         self.last_n_cls = last_n_cls
         self.weighted = weighted
         self.hidden_size = hidden_size
-        self.cls_pool_fc = LinLnDrop(hidden_size*self.last_n_cls, hidden_size, bias=False)
+        self.cls_pool_fc = LinLnDrop(hidden_size*self.last_n_cls, 1024, bias=False, act=Swish())
     
     def forward(self, embeddings, attention_mask=None):
         hidden_states = embeddings.hidden_states

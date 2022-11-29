@@ -31,9 +31,9 @@ class FeedbackPooler(nn.Module):
             ])
     
     def forward(self, embeddings, attention_mask):
-        # combine_feature = embeddings.last_hidden_state[:, 0, :]
-        # combine_feature = combine_feature.unsqueeze(1)
         combine_feature = None
+        combine_feature = embeddings.last_hidden_state[:, 0, :]
+        combine_feature = combine_feature.unsqueeze(1)
         if self.is_poolers:
             for layer in self.poolers:
                 layer_output = layer(embeddings, attention_mask)
@@ -61,24 +61,17 @@ class FeedbackHead(nn.Module):
         self.drop_3 = nn.Dropout(0.3)
         self.drop_4 = nn.Dropout(0.4)
         self.drop_5 = nn.Dropout(0.5)
-        self.output_layer = LinLnDrop(768, 6, bias=False)
+        self.output_layer = LinLnDrop(768, 6, bias=True)
     
     def forward(self, x):
         x_out = x.squeeze(1)
-        # print(x.shape)
-        # x_out = self.layers(x)
-        # print(x_out.shape)
-        # x_out = x + x_out
-        # print(x.shape)
         drop_1 = self.output_layer(self.drop_1(x_out))
         drop_2 = self.output_layer(self.drop_2(x_out))
         drop_3 = self.output_layer(self.drop_3(x_out))
         drop_4 = self.output_layer(self.drop_4(x_out))
         drop_5 = self.output_layer(self.drop_5(x_out))
         x_out = (drop_1 + drop_2 + drop_3 + drop_4 + drop_5)/5
-        # print(x.shape)
-        x_out = sigmoid_range((x_out), 1,5)
-        # print(x.shape)
+        x_out = sigmoid_range((x_out), 0.5,5.5)
         return x_out
 
 class ModelBuilder:

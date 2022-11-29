@@ -124,7 +124,8 @@ class ExpManager:
             self.oof_targs.append(val_targs)
 
             learn.model_dir = self.kwargs["model_dir"]
-            learn.export(f"fb3_fold_{fold+1}.pkl", with_opt=False)
+            # learn.export(f"fb3_fold_{fold+1}.pkl", with_opt=False)
+            learn.export(f"fb3_fold_{fold+1}.pkl")
 
             del learn, dls, dblock, model
             torch.cuda.empty_cache()

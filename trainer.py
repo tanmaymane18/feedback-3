@@ -56,7 +56,7 @@ hidden_size = 768
 
 config = dict(
     model_name="microsoft/deberta-v3-base",
-    max_len=512,
+    max_len=768,
     num_folds=5,
     num_labels=6,
     hidden_dropout_prob=0,
@@ -69,16 +69,16 @@ config = dict(
     loss_func=RMSE,
     fine_tune=False,
     full_training=True,
-    n_epochs=4,
+    n_epochs=2,
     lr_min=7e-6,
     lr_max=1e-4,
-    moms=(0.9, 0.999),
+    moms=(0.8, 0.999),
     pct_start=0.25,
     wd=1e-6,
     model_dir="last_4_cls_pool_full_training_one_cycle_1_fits_512_moms",
     poolers=[
-        partial(ClsPooler, hidden_size=hidden_size, 
-                        last_n_cls=4, weighted=False, drop_p=0.0)
+        # partial(ClsPooler, hidden_size=hidden_size, 
+        #                 last_n_cls=4, weighted=False, drop_p=0.0)
         # MeanPooling
         # MaxPooling,
         # MeanMaxPooler
