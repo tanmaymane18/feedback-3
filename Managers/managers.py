@@ -89,7 +89,8 @@ class ExpManager:
                             lr_max=self.kwargs["lr"]*lr_factor,
                             pct_start=self.kwargs["pct_start"],
                             wd=self.kwargs["wd"],
-                            cbs=[GradientClip]
+                            cbs=[GradientClip],
+                            moms=self.kwargs["moms"]
                         )
 
                         # sched = {"lr": combined_cos(0.20, self.kwargs["lr"]/100, self.kwargs["lr"], 0)}
@@ -123,7 +124,7 @@ class ExpManager:
             self.oof_targs.append(val_targs)
 
             learn.model_dir = self.kwargs["model_dir"]
-            learn.save(f"fb3_fold_{fold+1}", with_opt=False)
+            learn.export(f"fb3_fold_{fold+1}.pkl", with_opt=False)
 
             del learn, dls, dblock, model
             torch.cuda.empty_cache()

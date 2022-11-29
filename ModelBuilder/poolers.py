@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from fastai.layers import TimeDistributed
+from fastai.layers import TimeDistributed, Swish
 
 
 class MeanPooling(nn.Module):
@@ -44,36 +44,16 @@ class ClsPooler(nn.Module):
         super(ClsPooler, self).__init__()
         self.last_n_cls = last_n_cls
         self.weighted = weighted
-        # self.res_block = nn.Sequential(*[
-        #     ResNet1DBlock(hidden_size*(last_n_cls-i), hidden_size*(last_n_cls-(i+1)), p=drop_p) 
-        #     for i in range(last_n_cls) if ((last_n_cls-(i+1)) > 1)
-        # ])
-        if self.weighted:
-            self.weights = torch.ones(self.last_n_cls).unsqueeze(0).T
-            self.weights = nn.parameter.Parameter(self.weights)
-        else:
-            self.cls_pool_fc = LinLnDrop(hidden_size*self.last_n_cls, hidden_size, bias=False)
-            # nn.init.kaiming_normal(self.cls_pool_fc.weight)
+        self.hidden_size = hidden_size
+        self.cls_pool_fc = LinLnDrop(hidden_size*self.last_n_cls, hidden_size, bias=False)
     
     def forward(self, embeddings, attention_mask=None):
         hidden_states = embeddings.hidden_states
-        dim = -1
-        if self.weighted:
-            dim = 1
 
         last_n_concat= torch.concat([
             hidden_states[-i][:,0,:] for i in range(1, self.last_n_cls+1)
-        ], dim=dim)
+        ], dim=-1)
 
-        if self.weighted:
-            # print(last_n_concat.shape)
-            # print(self.weights.shape)
-            # last_n_concat = last_n_concat
-            cls_pooled = torch.sum(last_n_concat*self.weights, dim=dim)
-            return cls_pooled
-        # last_n_concat = last_n_concat.permute(0, 2, 1)
-        # last_n_concat = self.res_block(last_n_concat)
-        # last_n_concat = last_n_concat.permute(0,2,1)
         last_n_concat = self.cls_pool_fc(last_n_concat).unsqueeze(1)
         return last_n_concat
 
@@ -119,14 +99,14 @@ class Conv1DLayer(nn.Sequential):
         )
 
         layers.append(conv_1d)
-        
         super(Conv1DLayer, self).__init__(*layers)
 
 class Conv1DBlock(nn.Sequential):
     def __init__(self, in_chn, out_chn, p=0):
         layers = [
             Conv1DLayer(in_chn=in_chn, out_chn=in_chn, p=p),
-            Conv1DLayer(in_chn=in_chn, out_chn=out_chn, p=p)
+            Conv1DLayer(in_chn=in_chn, out_chn=out_chn, p=p),
+            Swish()
         ]
     
         super(Conv1DBlock, self).__init__(*layers)
@@ -150,7 +130,7 @@ class ResNet1DBlock(nn.Sequential):
         super(ResNet1DBlock, self).__init__(*layers)
 
 class LinLnDrop(nn.Sequential):
-    def __init__(self,in_dim, out_dim, act=None, norm_first=True, p=0, bias=False):
+    def __init__(self,in_dim, out_dim, act=None, norm_first=True, p=0, bias=True):
         layers = []
         if p > 0:
             layers.append(nn.Dropout(p))
@@ -165,7 +145,26 @@ class LinLnDrop(nn.Sequential):
             layers.append(act)
         super(LinLnDrop, self).__init__(*layers)
 
+class ResNetLinLnDrop(nn.Module):
+    def __init__(self, in_size=768, p=0.2):
+        super(ResNetLinLnDrop, self).__init__()        
+        self.linear_block = nn.Sequential(*[
+            LinLnDrop(in_dim=in_size, out_dim=in_size//2, act=Swish(), norm_first=True, p=p, bias=False),
+            LinLnDrop(in_dim=in_size//2, out_dim=in_size, act=Swish(), norm_first=True, p=p, bias=False)
+        ])
+    
+    def forward(self, x):
+        x_out = self.linear_block(x)
+        return x_out + x
+
+class LinResBlock(nn.Sequential):
+    def __init__(self, in_size=768, out_size=768, p=0.2, act=Swish()):
+        layers = [
+            ResNetLinLnDrop(in_size=in_size, p=p),
+            LinLnDrop(in_dim=in_size, out_dim=out_size, act=act, norm_first=True, p=0, bias=False)
+        ]
         
+        super(LinResBlock, self).__init__(*layers)
 
 if __name__ == "__main__":
     print("poolers")

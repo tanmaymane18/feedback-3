@@ -4,7 +4,7 @@ from fastai.layers import TimeDistributed, LinBnDrop, Swish, Mish, sigmoid_range
 from transformers import AutoConfig, AutoModel
 from transformers.modeling_outputs import SequenceClassifierOutput
 
-from .poolers import MeanPooling, MaxPooling, ClsPooler, LinLnDrop
+from .poolers import MeanPooling, MaxPooling, ClsPooler, LinLnDrop, LinResBlock
 
 class FeedbackModel(nn.Module):
     def __init__(self):
@@ -47,16 +47,39 @@ class FeedbackPooler(nn.Module):
         return combine_feature
 
 class FeedbackHead(nn.Module):  
-    def __init__(self, dims, ps):
+    def __init__(self, dims, ps, n_blocks=3):
         super(FeedbackHead, self).__init__()
-        acts = [Swish()] * (len(dims) - 2) + [None]
-        layers = [LinLnDrop(i, o, p=p, act=a) for i,o,p,a in zip(dims[:-1], dims[1:], ps, acts)] + [LinBnDrop(dims[-1], 6, bn=False)]
-        self.layers = nn.Sequential(*layers)
+        # acts = [Swish()] * (len(dims) - 2) + [None]
+        # layers = [LinLnDrop(i, o, p=p, act=a) for i,o,p,a in zip(dims[:-1], dims[1:], ps, acts)] + [LinBnDrop(dims[-1], 6, bn=False)]
+        # self.layers = nn.Sequential(*layers)
+        # sizes = [768*4, 768*2, 768, 768]
+        # self.layers = nn.Sequential(*[
+        #     LinResBlock(in_size=sizes[i], out_size=sizes[i+1]) for i in range(n_blocks)
+        # ])
+        self.drop_1 = nn.Dropout(0.1)
+        self.drop_2 = nn.Dropout(0.2)
+        self.drop_3 = nn.Dropout(0.3)
+        self.drop_4 = nn.Dropout(0.4)
+        self.drop_5 = nn.Dropout(0.5)
+        self.output_layer = LinLnDrop(768, 6, bias=False)
     
     def forward(self, x):
-        x = x.squeeze(1)
-        x = sigmoid_range(self.layers(x), 0.5,5.5)
-        return x
+        x_out = x.squeeze(1)
+        # print(x.shape)
+        # x_out = self.layers(x)
+        # print(x_out.shape)
+        # x_out = x + x_out
+        # print(x.shape)
+        drop_1 = self.output_layer(self.drop_1(x_out))
+        drop_2 = self.output_layer(self.drop_2(x_out))
+        drop_3 = self.output_layer(self.drop_3(x_out))
+        drop_4 = self.output_layer(self.drop_4(x_out))
+        drop_5 = self.output_layer(self.drop_5(x_out))
+        x_out = (drop_1 + drop_2 + drop_3 + drop_4 + drop_5)/5
+        # print(x.shape)
+        x_out = sigmoid_range((x_out), 1,5)
+        # print(x.shape)
+        return x_out
 
 class ModelBuilder:
     def __init__(self, model_name, dims, ps, poolers=None, num_labels=6, hidden_dropout_prob=0):
